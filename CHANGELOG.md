@@ -43,6 +43,14 @@ All notable changes to the KiCAD MCP Server project are documented here.
   - `schematicParity` set to true adds the schematic check, with a warning
     when kicad-cli could not load the schematic.
   - A failed kicad-cli run reports stdout's last lines when stderr is empty.
+- **`add_via` keeps the net it was given inside another net's zone.** It
+  created a non-free via, and KiCad 10 gives a non-free via the net of the
+  copper it touches when the board is saved. A via placed inside a filled
+  zone of another net, before anything of its own net reached it, was written
+  to the file on the zone's net, while the reply named the requested one: on a
+  battery board with a plane in every cell, a CMGND via came back as the
+  cell's supply net and shorted. `add_via` now makes a free via, as KiCad's
+  Add Free-Standing Via does, and reports the net the via has.
 - **`export_svg` writes the SVG it reports** (#467). It plotted without
   opening a plot file first, the same mistake #456 fixed in `export_gerber`,
   so no file was written while the reply said success. It now writes one SVG
