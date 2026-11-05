@@ -127,6 +127,21 @@ def global_table_for_reading(table_type: str) -> Optional[Path]:
             )
             return candidate
     return None
+def project_library_uri(library: Path, table_dir: Path) -> str:
+    """The URI a project table should hold for *library*.
+
+    ``${KIPRJMOD}/<relative path>`` when the library lies inside the project
+    directory, which is what KiCad's own library manager writes. An absolute
+    path stops resolving as soon as the project is moved, cloned on another
+    machine or opened from Windows after being made under WSL. A library outside
+    the project keeps its absolute path, since there is nothing to be relative to.
+    """
+    absolute = Path(library).resolve()
+    try:
+        relative = absolute.relative_to(Path(table_dir).resolve())
+    except ValueError:
+        return str(library).replace("\\", "/")
+    return "${KIPRJMOD}/" + relative.as_posix()
 
 
 def no_global_table_message(table_type: str, remedy: str) -> str:
