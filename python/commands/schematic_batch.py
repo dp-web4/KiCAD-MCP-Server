@@ -23,6 +23,7 @@ from commands.pin_locator import PinLocator
 from commands.schematic_text_utils import (
     _extract_property_position,
     _find_facing_label,
+    _straight_ahead,
     _find_placed_symbol_block,
     _find_project_root,
     _move_property_in_block,
@@ -584,7 +585,9 @@ class SchematicBatchCommands:
                 for net, pos, kind, angle in new_labels:
                     if kind != "label" or net != net_name or angle % 360 != facing:
                         continue
-                    if ((pos[0] - px) ** 2 + (pos[1] - py) ** 2) ** 0.5 <= proximity_mm:
+                    if ((pos[0] - px) ** 2 + (pos[1] - py) ** 2) ** 0.5 <= proximity_mm and _straight_ahead(
+                        position, orientation, pos
+                    ):
                         return [pos[0], pos[1]]
                 return None
 

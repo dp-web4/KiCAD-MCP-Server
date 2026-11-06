@@ -78,6 +78,13 @@ All notable changes to the KiCAD MCP Server project are documented here.
 
 ### Bug Fixes
 
+- **`batch_connect` no longer draws diagonal wires to a "facing" label.** A pin
+  was joined by a wire to any label of its net within 14 mm whose orientation
+  was opposite its own, wherever that label was. A label 9 mm across and 10 mm
+  down got a diagonal wire, and a label behind the pin got a wire back across
+  the symbol body. A label now counts as facing only when it lies straight out
+  in front of the pin, on the pin's axis; otherwise the pin gets its own label.
+
 - **`run_drc` reports unconnected items and schematic-parity issues, and
   refills zones first on KiCad 10.** kicad-cli's JSON report keeps three
   lists, and only `violations` was read, so missing connections
