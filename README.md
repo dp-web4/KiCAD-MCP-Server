@@ -23,8 +23,8 @@ The [Model Context Protocol](https://modelcontextprotocol.io/) is an open standa
 
 **Key Capabilities:**
 
-- 248 tools registered, every one of them indexed for keyword discovery
-- 248 tools across 20 categories with JSON Schema validation
+- 249 tools registered, every one of them indexed for keyword discovery
+- 249 tools across 20 categories with JSON Schema validation
 - Keyword tool discovery via `search_tools` / `get_category_tools`
 - Optional toolboxes: start with a 37-tool core and open the rest by category,
   to save context and stay under client tool limits
