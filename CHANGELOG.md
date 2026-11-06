@@ -22,6 +22,13 @@ All notable changes to the KiCAD MCP Server project are documented here.
     new net, how it was matched), plus a count per transition such as
     `"VBAT -> GND": 2`, and the vias added, removed and moved.
   - Read-only, so it is available in `readonly` mode.
+- **`autoroute` can route a chosen set of nets** (`routeNets`, `excludeNets`,
+  names or globs such as `/HV PWR/*`). Freerouting routes every net in the
+  DSN; the selection is applied to the DSN copy, so nets left out keep their
+  pads and copper on the board as obstacles but get no routing. That lets an
+  isolated high-voltage board be routed one domain at a time (pack-side nets
+  inside their region, then the logic nets) and leaves high-current nets for
+  hand-drawn pours. The reply lists `netsLeftOut`.
 
 - **Operating modes: a readonly mode for review agents, and a manufacturing
   mode** (#443 and #444, @b0gdaniy). `KICAD_MCP_OPERATING_MODE=readonly`
