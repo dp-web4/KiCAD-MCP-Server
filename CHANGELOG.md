@@ -38,15 +38,30 @@ All notable changes to the KiCAD MCP Server project are documented here.
   - The mode combines with `KICAD_MCP_TOOLBOXES`, and read-only tools carry
     MCP's `readOnlyHint` annotation in every mode.
 
+- **`sync_schematic_to_board` can replace changed footprints and delete
+  removed ones** (`replaceFootprints`, `deleteUnusedFootprints`), KiCad F8's
+  two opt-in options. Until now a footprint whose name changed in the
+  schematic was only reported, and a part deleted from the schematic stayed
+  on the board, so revising an existing board meant finishing the job by
+  hand.
+  - `replaceFootprints` loads the new footprint and keeps the old one's
+    reference, value, fields, symbol link, position, rotation, side and
+    lock. The new pads get their nets in the same sync.
+  - `deleteUnusedFootprints` removes footprints with no symbol. Board-only
+    footprints (mounting holes, logos) are kept, as KiCad keeps them, and so
+    are locked ones, which are reported.
+  - Both work with `dryRun`, and the reply lists `footprints_replaced` and
+    `footprints_deleted`.
+
 - **`sync_schematic_to_board` can preview (`dryRun: true`).** The sync
   overwrites board values and fields with the schematic's and moves pads to
   the schematic's nets, as KiCad's F8 does. On a board edited after its last
   sync that discards data, and until now the list of changes came back only
   after they were saved. With `dryRun` the same list comes back and nothing
   is written (the board file is byte-identical afterwards).
-  - New in every reply: `pads_changed` (`"U6/1: 'Net-(U6-A)' ->
-    'unconnected-(U6-NC-Pad1)'"`), only the pads whose net actually
-    changes, plus `pads_changed_count` and `dryRun`. `pads_assigned` still
+  - New in every reply: `pads_changed`, only the pads whose net actually
+    changes (for example `U6/1: 'Net-(U6-A)' -> 'unconnected-(U6-NC-Pad1)'`),
+    plus `pads_changed_count` and `dryRun`. `pads_assigned` still
     counts every matched pad, so an up-to-date board reports many assigned
     and 0 changed.
   - On a real 107-part board, the preview showed 39 value changes, 107
