@@ -4,6 +4,18 @@ All notable changes to the KiCAD MCP Server project are documented here.
 
 ## [Unreleased]
 
+### New MCP Prompt
+
+- `pdn_dc_review` — Checklist for a DC power-distribution review using
+  `get_stackup`, `summarize_vias`, `summarize_net_copper`, `query_traces`, and
+  `query_zones`. It does not ask for a copper solve or an impedance curve this
+  server cannot produce. Target impedance is the allowed ripple divided by the
+  load's transient step.
+- `emc_shield_review` — Checklist for a shield review from the board geometry
+  (`get_component_list`, `get_stackup`, `summarize_vias`). It does not assume a
+  near-field solver. A caller may paste a comparison; the prompt does not
+  invent one.
+
 ### New Features
 
 - **`audit_via_nets`: compare every via's net with a reference board.**
@@ -53,7 +65,11 @@ All notable changes to the KiCAD MCP Server project are documented here.
   hand.
   - `replaceFootprints` loads the new footprint and keeps the old one's
     reference, value, fields, symbol link, position, rotation, side and
-    lock. The new pads get their nets in the same sync.
+    lock, and the board's text layout: each field keeps its position, size,
+    layer and visibility, as KiCad's F8 does (replacing 53 parts on a real
+    board without this reset every reference to the library spot and put
+    every MPN on the silkscreen: 199 silk violations). The new pads get
+    their nets in the same sync.
   - `deleteUnusedFootprints` removes footprints with no symbol. Board-only
     footprints (mounting holes, logos) are kept, as KiCad keeps them, and so
     are locked ones, which are reported.
@@ -85,6 +101,54 @@ All notable changes to the KiCAD MCP Server project are documented here.
   the symbol body. A label now counts as facing only when it lies straight out
   in front of the pin, on the pin's axis; otherwise the pin gets its own label.
 
+- **`sync_schematic_to_board` and `create_board_from_schematic` take nets from
+  KiCad's own netlist.**
+  - **Before.** Pad nets came from a built-in walker that followed wires and
+    labels geometrically. It disagreed with KiCad whenever a net changed name
+    across a sheet boundary or a label sat mid-wire, and it wrote flat names
+    (`SWDIO`, not `/MCU/SWDIO`). On a real 77-part, 9-sheet board, 304 of 333
+    pads ended up on a net KiCad disagrees with, and KiCad's parity check
+    reported 349 issues, while the tool said success.
+  - **Now.** Nets come from `kicad-cli sch export netlist`, read in the
+    S-expression format because the XML writer unescapes names (`ADC7/PB6`
+    instead of KiCad's `ADC7{slash}PB6`). Each footprint is linked to its
+    symbol by path, and symbol values, fields and the BOM/DNP flags are carried
+    over, as KiCad's Update PCB does. The same board now has 0 pads that
+    disagree with KiCad and 3 parity issues, all in the design itself.
+  - **Also reported.** The reply says `netSource`. Pads that aren't pins of
+    their symbol have their net cleared (`pads_cleared`). Footprints that
+    differ from the symbol's are listed in `footprint_changes_pending`, not
+    swapped.
+  - **Fallback.** Without kicad-cli the built-in walker is still used, with a
+    warning.
+- **`add_via` reads the parameters its schemas declare** (#407). The SWIG
+  handler indexed `position["unit"]`, so a call without the optional `unit`
+  failed with `'unit'`. JSON-RPC calls (`x`, `y`, `diameter`, `netName`) were
+  refused as `Missing position`, and the IPC handler took `x`/`y` as mm
+  whatever their unit. Both handlers now share one parameter reader: `unit`
+  defaults to mm, the JSON-RPC names are accepted, a net that does not exist
+  is reported instead of leaving the via unconnected, and a `viaType` other
+  than `through` is refused instead of quietly adding a through via.
+- **Autoroute with several attempts no longer crashes with `PermissionError`
+  on a rootful Docker engine** (#477). The best-of-N restore step copied the
+  winning SES over the existing file with `shutil.copy2`, which needs write
+  permission on that file; on a rootful Docker engine the file is still
+  owned by the container. It now writes to a sibling path and renames over
+  the existing file instead, which only needs write permission on the
+  directory.
+- **Schematic edits are refused while the schematic is open in KiCad** (#472).
+  KiCad keeps its own copy of an open schematic and does not reload it when
+  the file changes on disk, so saving there silently overwrote what the
+  schematic tools wrote. Commands that edit a schematic now ask KiCad over IPC
+  which schematic is open and refuse if it belongs to the same project. Tools
+  that write only on request (`lint_offgrid` with `fix`, `dryRun: false`,
+  `apply`) are refused only then, and previews (`dryRun`/`dry_run`) pass.
+  Every file `update_symbol_from_library` would write is checked,
+  `backannotate_footprints` without `schematicPath` checks the board's
+  schematic, and `create_schematic` and `create_project` no longer replace an
+  open schematic with an empty one. Set
+  `KICAD_ALLOW_OPEN_SCHEMATIC_EDITS=true` to allow them anyway; the opt-in
+  Windows reload (`KICAD_INTERACTIVE_SCHEMATIC`) is unaffected.
 - **`run_drc` reports unconnected items and schematic-parity issues, and
   refills zones first on KiCad 10.** kicad-cli's JSON report keeps three
   lists, and only `violations` was read, so missing connections
