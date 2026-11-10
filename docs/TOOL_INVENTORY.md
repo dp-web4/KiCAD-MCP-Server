@@ -5,8 +5,8 @@
      in this file are preserved, so improving the wording here is safe. -->
 
 **Version:** 2.8.3
-**Tools registered on the server:** 252
-**Tools indexed for keyword discovery:** 252 in 20 categories
+**Tools registered on the server:** 254
+**Tools indexed for keyword discovery:** 254 in 20 categories
 **Last updated:** 2026-11-10
 
 ## How to read this document
@@ -147,7 +147,7 @@ _Source: `src/tools/routing.ts`_
 
 ---
 
-## Design Rules and DRC (8 tools)
+## Design Rules and DRC (9 tools)
 
 _Source: `src/tools/design-rules.ts`_
 
@@ -159,8 +159,8 @@ _Source: `src/tools/design-rules.ts`_
 | `assign_net_to_class`         | Assign net to a net class                                              | `drc`     |
 | `set_layer_constraints`       | Set layer-specific constraints                                         | `drc`     |
 | `set_voltage_clearance_rules` | Clearance/creepage rules graded by working voltage between net classes | `drc`     |
-| `audit_via_nets`              | Compare via nets with a reference board or git revision                | `drc`     |
 | `check_clearance`             | Check clearance between two items                                      | `drc`     |
+| `audit_via_nets`              | Compare via nets with a reference board or git revision                | `drc`     |
 | `get_drc_violations`          | Get DRC violation list (filter by severity)                            | `drc`     |
 
 ---
@@ -527,7 +527,7 @@ _Source: `src/tools/toolboxes.ts`_
 | `board.ts`               | Board Management                       | 21      |
 | `component.ts`           | Component Management                   | 28      |
 | `routing.ts`             | Routing                                | 19      |
-| `design-rules.ts`        | Design Rules and DRC                   | 8       |
+| `design-rules.ts`        | Design Rules and DRC                   | 9       |
 | `export.ts`              | Export and Fabrication Output          | 27      |
 | `schematic.ts`           | Schematic                              | 47      |
 | `schematic-batch.ts`     | Schematic Batch Operations             | 9       |
@@ -549,18 +549,18 @@ _Source: `src/tools/toolboxes.ts`_
 | `digikey-api.ts`         | digikey-api.ts                         | 3       |
 | `gui-driver.ts`          | gui-driver.ts                          | 11      |
 | `toolboxes.ts`           | toolboxes.ts                           | 3       |
-| **Total**                |                                        | **252** |
+| **Total**                |                                        | **254** |
 
 ## Summary by discovery category
 
-These are the categories `search_tools` searches. They cover 252 of the 252 registered tools.
+These are the categories `search_tools` searches. They cover 254 of the 254 registered tools.
 
 | Category                   | Tools indexed |
 | -------------------------- | ------------- |
 | `board`                    | 17            |
 | `component`                | 24            |
 | `export`                   | 27            |
-| `drc`                      | 9             |
+| `drc`                      | 10            |
 | `schematic`                | 36            |
 | `library`                  | 9             |
 | `symbol_library`           | 17            |
@@ -577,6 +577,6 @@ These are the categories `search_tools` searches. They cover 252 of the 252 regi
 | `parts-registry`           | 3             |
 | `digikey`                  | 3             |
 | `gui-driver`               | 11            |
-| **Indexed total**          | **252**       |
+| **Indexed total**          | **254**       |
 | Registered but not indexed | 0             |
-| **Registered total**       | **252**       |
+| **Registered total**       | **254**       |
