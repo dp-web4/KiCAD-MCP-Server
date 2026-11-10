@@ -147,7 +147,7 @@ _Source: `src/tools/routing.ts`_
 
 ---
 
-## Design Rules and DRC (7 tools)
+## Design Rules and DRC (8 tools)
 
 _Source: `src/tools/design-rules.ts`_
 
@@ -527,7 +527,7 @@ _Source: `src/tools/toolboxes.ts`_
 | `board.ts`               | Board Management                       | 21      |
 | `component.ts`           | Component Management                   | 28      |
 | `routing.ts`             | Routing                                | 19      |
-| `design-rules.ts`        | Design Rules and DRC                   | 7       |
+| `design-rules.ts`        | Design Rules and DRC                   | 8       |
 | `export.ts`              | Export and Fabrication Output          | 27      |
 | `schematic.ts`           | Schematic                              | 47      |
 | `schematic-batch.ts`     | Schematic Batch Operations             | 9       |
@@ -560,7 +560,7 @@ These are the categories `search_tools` searches. They cover 252 of the 252 regi
 | `board`                    | 17            |
 | `component`                | 24            |
 | `export`                   | 27            |
-| `drc`                      | 8             |
+| `drc`                      | 9             |
 | `schematic`                | 36            |
 | `library`                  | 9             |
 | `symbol_library`           | 17            |
