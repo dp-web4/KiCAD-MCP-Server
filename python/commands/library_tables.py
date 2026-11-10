@@ -127,6 +127,8 @@ def global_table_for_reading(table_type: str) -> Optional[Path]:
             )
             return candidate
     return None
+
+
 def project_library_uri(library: Path, table_dir: Path) -> str:
     """The URI a project table should hold for *library*.
 
