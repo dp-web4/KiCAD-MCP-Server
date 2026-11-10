@@ -121,6 +121,14 @@ All notable changes to the KiCAD MCP Server project are documented here.
     swapped.
   - **Fallback.** Without kicad-cli the built-in walker is still used, with a
     warning.
+- **A sheet with exactly one hierarchical label no longer breaks board
+  creation.** kicad-skip returns a collection for two or more hierarchical
+  labels (or no-connects), but the bare element when there is exactly one.
+  `getattr(sch, kind, None) or []` then raised "`__bool__` should return bool,
+  returned str", so `create_board_from_schematic` and
+  `sync_schematic_to_board` failed on such a project. Iterating the bare
+  element would also have walked its children instead of the items. A new
+  `utils.skip_items.skip_items(sch, kind)` always returns a list of items.
 - **`import_eagle_project` no longer replaces a schematic that is open in
   KiCad.** It writes `<output_dir>/<project_name>.kicad_sch` without checking
   whether that file exists, so re-importing into an open project overwrote it
@@ -252,14 +260,6 @@ All notable changes to the KiCAD MCP Server project are documented here.
   `match_paren` now, plus a new `paren_delta` for the scanners that read line
   by line. (The matcher in `schematic_handlers` was already string-aware;
   this brings every other scanner in line with it.)
-- **A sheet with exactly one hierarchical label no longer breaks board
-  creation.** kicad-skip returns a collection for two or more hierarchical
-  labels (or no-connects), but the bare element when there is exactly one.
-  `getattr(sch, kind, None) or []` then raised "__bool__ should return bool,
-  returned str", so `create_board_from_schematic` and
-  `sync_schematic_to_board` failed on such a project. Iterating the bare
-  element would also have walked its children instead of the items. A new
-  `utils.skip_items.skip_items(sch, kind)` always returns a list of items.
 - **Net classes and their nets reach KiCad, and the replies say what was
   written.** Checked with KiCad's own DRC on 9.0.9 and 10.0.8.
   - `create_netclass` with `nets` replied with the requested nets and
@@ -304,11 +304,38 @@ All notable changes to the KiCAD MCP Server project are documented here.
   is named `<board>-<name>.svg` like the PDF export. Both `export_svg` and
   `export_pdf` now take that name from KiCad and fail if the file is missing,
   instead of reporting a path nobody checked.
+- **Board tools keep working after an image render** (#479).
+  `get_board_2d_view` and the schematic view rasterize with pymupdf, which,
+  like pcbnew, is a SWIG module. On builds where both use the same SWIG
+  runtime version, they share one type table, and pymupdf loading after pcbnew
+  replaced pcbnew's iterator class. Every later loop over board drawings,
+  tracks or footprint graphics then failed with
+  `'SwigPyIterator' object has no attribute 'next'` until the server
+  restarted; `list_graphics` was the most visible casualty. If you never saw
+  that error, your build keeps the tables separate and was not affected (seen
+  with KiCad 9.0.8 from Ubuntu 26.04 and pymupdf 2.1). The server now imports
+  pymupdf before pcbnew, and both view tools re-register pcbnew's iterator
+  class after loading pymupdf, so the import order no longer matters.
 - **Prompts include the arguments you pass** (found while reviewing #470).
   Every prompt's text marks its arguments with `{{name}}`, but no handler
   filled them in, so the model received the literal `{{requirements}}` and the
   user's text was dropped. All 18 prompts now substitute their arguments; an
   optional one left out reads "(not provided)".
+
+### Tooling
+
+- **CI jobs time out instead of hanging for six hours.** No job in
+  `ci.yml` set `timeout-minutes`, so GitHub's 360-minute default applied. On
+  2026-11-06 a KiCad 10 integration leg on the #505 merge train sat in the
+  KiCad PPA install step for over 25 minutes (normally under 2) until it was
+  cancelled by hand, and the required `CI passed` check stayed pending the
+  whole time. Every job now has a limit of about 3x its slowest successful run
+  on `main` (10 minutes at least; 35 for the integration tests). The KiCad
+  install step also has its own 25-minute limit, apt drops a connection that
+  sends nothing for 60 seconds and retries the file, and each apt command is
+  retried up to 3 times. A timed-out job counts as failed, so `CI passed`
+  fails with it.
+
 
 ## [2.8.3] - 2026-10-25
 
