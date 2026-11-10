@@ -223,6 +223,33 @@ All notable changes to the KiCAD MCP Server project are documented here.
   a message naming both shapes. `delete_schematic_net_label` refuses a
   position that is present but malformed instead of treating it as absent,
   which would have deleted the only label of that name.
+- **Net classes and their nets reach KiCad, and the replies say what was
+  written.** Checked with KiCad's own DRC on 9.0.9 and 10.0.8.
+  - `create_netclass` with `nets` replied with the requested nets and
+    `persisted: true` while assigning none of them. The in-memory call was
+    `SetClass`, which KiCad 8 renamed to `SetNetClass`, and membership was
+    never written to the project. It now writes membership to the
+    `.kicad_pro` like `assign_net_to_class` does. It replies with
+    `netsAssigned` (written) and `netsNotAssigned` (not on the board, or not
+    writable), and `netClass.nets` lists only the assigned nets.
+  - On KiCad 9, `pcbnew.SaveBoard` rewrites the `.kicad_pro` from the board's
+    in-memory settings, so the next board save erased every class and
+    assignment the server had written to the file. Classes and memberships
+    are now also registered in those in-memory settings (`SetNetclass`, plus a
+    pattern assignment on the escaped net name, since KiCad reads a pattern
+    as a regular expression and a raw `D+` would also claim `D` and `DD`).
+    `SetNetclassPatternAssignment` appends, so the in-memory list is rebuilt
+    from the project file on each assignment; moving a net from class A to B
+    leaves it in B, not in the composite `A,B`. KiCad 8 has no
+    `SetNetclassPatternAssignment`; there membership reaches KiCad through
+    the project file only.
+  - `assign_net_to_class` right after `create_netclass` in the same session
+    failed with "Net class not found", because the class was added to a copy
+    of the class map. It now finds it.
+  - `add_net` with `netClass` reported "Failed to add net" after adding the
+    net (the same `SetClass` error). It now applies and persists the class,
+    reports `classPersisted`, and warns about an unknown class instead of
+    claiming it.
 - **`assign_net_to_class` membership now survives Update PCB from Schematic**
   (#517). The tool wrote only `net_settings.netclass_assignments`, which KiCad
   derives from the schematic's net-class directives and rewrites on a sync; a
@@ -353,27 +380,6 @@ All notable changes to the KiCAD MCP Server project are documented here.
   battery board with a plane in every cell, a CMGND via came back as the
   cell's supply net and shorted. `add_via` now makes a free via, as KiCad's
   Add Free-Standing Via does, and reports the net the via has.
-- **Net classes and their nets reach KiCad, and the replies say what was
-  written.** Checked with KiCad's own DRC on 9.0.9 and 10.0.8.
-  - `create_netclass` with `nets` replied with the requested nets and
-    `persisted: true` while assigning none of them. The in-memory call was
-    `SetClass`, which KiCad 8 renamed to `SetNetClass`, and membership was
-    never written to the project. It now writes membership to the
-    `.kicad_pro` like `assign_net_to_class` does. It replies with
-    `netsAssigned` (written) and `netsNotAssigned` (not on the board, or not
-    writable), and `netClass.nets` lists only the assigned nets.
-  - On KiCad 9, `pcbnew.SaveBoard` rewrites the `.kicad_pro` from the board's
-    in-memory settings, so the next board save erased every class and
-    assignment the server had written to the file. Classes and memberships
-    are now also registered in those in-memory settings (`SetNetclass`, plus a
-    pattern assignment on the exact net name).
-  - `assign_net_to_class` right after `create_netclass` in the same session
-    failed with "Net class not found", because the class was added to a copy
-    of the class map. It now finds it.
-  - `add_net` with `netClass` reported "Failed to add net" after adding the
-    net (the same `SetClass` error). It now applies and persists the class,
-    reports `classPersisted`, and warns about an unknown class instead of
-    claiming it.
 - **`export_svg` writes the SVG it reports** (#467). It plotted without
   opening a plot file first, the same mistake #456 fixed in `export_gerber`,
   so no file was written while the reply said success. It now writes one SVG
