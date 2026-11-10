@@ -117,6 +117,28 @@ All notable changes to the KiCAD MCP Server project are documented here.
 
 ### Bug Fixes
 
+- **Schematic batch edits no longer time out half-written.** `batch_connect`
+  (and `batch_add_and_connect`, which uses it) wrote the file once per pin,
+  re-parsing and re-serialising the whole sheet two or three times per
+  label. On a real 11,000-line sheet that was about 2.4 s per label, so a
+  12-pin part ran past the bridge's 30 s timeout. The bridge then restarted
+  the worker mid-batch: only some of the labels were written, and the caller
+  was told the call had failed, so a retry would duplicate the ones that
+  landed.
+  - Every pin is now resolved first, while the file is unchanged, and all
+    labels and wires are written in one read-modify-write. Four labels on
+    that sheet went from 9.6 s to 4.2 s, and the cost no longer grows with
+    the number of labels.
+  - Facing pins in the same batch are still joined by a wire, under the same
+    straight-ahead rule as a label already in the file: a planned label off
+    the pin's axis gets no diagonal wire.
+  - With `replace`, the old labels are removed in the same write that adds
+    the new ones, so a failed write leaves the sheet as it was instead of
+    with the old labels gone. `replace` also clears the net's label at the
+    stub end, and a stub wire already in the file is not added twice, so
+    re-running a `stubLength` batch does not stack a second label and wire.
+  - The schematic batch commands also get the long timeout, so a very large
+    sheet can't be cut off part-way.
 - **`batch_connect` no longer draws diagonal wires to a "facing" label.** A pin
   was joined by a wire to any label of its net within 14 mm whose orientation
   was opposite its own, wherever that label was. A label 9 mm across and 10 mm
@@ -330,22 +352,6 @@ All notable changes to the KiCAD MCP Server project are documented here.
     net (the same `SetClass` error). It now applies and persists the class,
     reports `classPersisted`, and warns about an unknown class instead of
     claiming it.
-- **Schematic batch edits no longer time out half-written.** `batch_connect`
-  (and `batch_add_and_connect`, which uses it) wrote the file once per pin,
-  re-parsing and re-serialising the whole sheet two or three times per
-  label. On a real 11,000-line sheet that was about 2.4 s per label, so a
-  12-pin part ran past the bridge's 30 s timeout. The bridge then restarted
-  the worker mid-batch: only some of the labels were written, and the caller
-  was told the call had failed, so a retry would duplicate the ones that
-  landed.
-  - Every pin is now resolved first, while the file is unchanged, and all
-    labels and wires are written in one read-modify-write. Four labels on
-    that sheet went from 9.6 s to 4.2 s, and the cost no longer grows with
-    the number of labels.
-  - Facing pins in the same batch are still joined by a wire.
-  - The schematic batch commands also get the long timeout, so a very large
-    sheet can't be cut off part-way.
-
 - **`export_svg` writes the SVG it reports** (#467). It plotted without
   opening a plot file first, the same mistake #456 fixed in `export_gerber`,
   so no file was written while the reply said success. It now writes one SVG
