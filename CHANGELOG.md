@@ -129,6 +129,20 @@ All notable changes to the KiCAD MCP Server project are documented here.
   `sync_schematic_to_board` failed on such a project. Iterating the bare
   element would also have walked its children instead of the items. A new
   `utils.skip_items.skip_items(sch, kind)` always returns a list of items.
+- **STM32 and other symbols with parentheses in pin names load again.** KiCad
+  writes a `(` inside a quoted string as is, so the stock STM32 libraries have
+  pin names like `"PA13(JTMS"`. Twenty block scanners counted every `(` and
+  `)`, including those inside strings, so a single quoted `(` threw them off
+  to the end of the file. `list_symbol_pins`, `add_schematic_component` and
+  `import_symbol` failed on every `MCU_ST_STM32H5` symbol. Once such a symbol
+  was in a schematic, adding any other symbol type failed with "No
+  lib_symbols section found". The same miscount affected datasheet
+  enrichment, library property edits, symbol removal, `replace_instance_lib_ids`,
+  sheet lookups, `add_sheet_pin`, footprint pad and 3D-model edits, the
+  footprint parser and `.kicad_dru` rule lookup. They all use the string-aware
+  `match_paren` now, plus a new `paren_delta` for the scanners that read line
+  by line. (The matcher in `schematic_handlers` was already string-aware;
+  this brings every other scanner in line with it.)
 - **`import_eagle_project` no longer replaces a schematic that is open in
   KiCad.** It writes `<output_dir>/<project_name>.kicad_sch` without checking
   whether that file exists, so re-importing into an open project overwrote it
@@ -246,20 +260,6 @@ All notable changes to the KiCAD MCP Server project are documented here.
   battery board with a plane in every cell, a CMGND via came back as the
   cell's supply net and shorted. `add_via` now makes a free via, as KiCad's
   Add Free-Standing Via does, and reports the net the via has.
-- **STM32 and other symbols with parentheses in pin names load again.** KiCad
-  writes a `(` inside a quoted string as is, so the stock STM32 libraries have
-  pin names like `"PA13(JTMS"`. Twenty block scanners counted every `(` and
-  `)`, including those inside strings, so a single quoted `(` threw them off
-  to the end of the file. `list_symbol_pins`, `add_schematic_component` and
-  `import_symbol` failed on every `MCU_ST_STM32H5` symbol. Once such a symbol
-  was in a schematic, adding any other symbol type failed with "No
-  lib_symbols section found". The same miscount affected datasheet
-  enrichment, library property edits, symbol removal, `replace_instance_lib_ids`,
-  sheet lookups, `add_sheet_pin`, footprint pad and 3D-model edits, the
-  footprint parser and `.kicad_dru` rule lookup. They all use the string-aware
-  `match_paren` now, plus a new `paren_delta` for the scanners that read line
-  by line. (The matcher in `schematic_handlers` was already string-aware;
-  this brings every other scanner in line with it.)
 - **Net classes and their nets reach KiCad, and the replies say what was
   written.** Checked with KiCad's own DRC on 9.0.9 and 10.0.8.
   - `create_netclass` with `nets` replied with the requested nets and
@@ -335,7 +335,6 @@ All notable changes to the KiCAD MCP Server project are documented here.
   sends nothing for 60 seconds and retries the file, and each apt command is
   retried up to 3 times. A timed-out job counts as failed, so `CI passed`
   fails with it.
-
 
 ## [2.8.3] - 2026-10-25
 
