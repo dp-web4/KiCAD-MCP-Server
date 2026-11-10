@@ -214,6 +214,15 @@ All notable changes to the KiCAD MCP Server project are documented here.
   work, an added, connected or updated count above zero or a non-empty list
   of applied items, the reply stays a normal result with its `errors` list,
   so `isError` means nothing happened and the call is safe to retry.
+- **Every schematic tool that takes a `position` accepts `[x, y]` and
+  `{"x": .., "y": ..}`.** `add_schematic_text`, `add_schematic_hierarchical_label`
+  and `add_sheet_pin` took a list; a dict passed their length check and then
+  failed with "Failed to add text annotation". `delete_schematic_net_label`
+  took a dict; a list raised. Either shape now works everywhere, in the MCP
+  schemas as well as the Python handlers, and a malformed one is refused with
+  a message naming both shapes. `delete_schematic_net_label` refuses a
+  position that is present but malformed instead of treating it as absent,
+  which would have deleted the only label of that name.
 - **`import_eagle_project` no longer replaces a schematic that is open in
   KiCad.** It writes `<output_dir>/<project_name>.kicad_sch` without checking
   whether that file exists, so re-importing into an open project overwrote it
