@@ -86,6 +86,11 @@ All notable changes to the KiCAD MCP Server project are documented here.
     `suggest_schematic_declutter` and `autoplace_schematic_fields`, so the
     three tools agree on how much room a label takes.
   - Read-only; available in `readonly` mode.
+  hand-drawn pours. The left-out nets' existing tracks, arcs and vias become
+  keepouts in the DSN (Freerouting drops the wires of nets it does not know)
+  and are locked for the session import, which KiCad keeps locked tracks
+  through, so routing in passes keeps the earlier passes with the same
+  objects, UUIDs and groups. The reply lists `netsLeftOut`.
 - **`autoroute` keeps tracks off plane layers: `signalLayers` and
   `layerTraceCosts`.** KiCad exports every copper layer as `(type signal)`,
   so Freerouting ran tracks across the inner planes of a 4-layer board and cut
