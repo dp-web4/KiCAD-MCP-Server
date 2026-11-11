@@ -475,6 +475,7 @@ def _signal_layer_rules(
     signal_layers: List[str],
     trace_costs: Optional[Dict[str, float]] = None,
     design_name: str = "kicad-mcp",
+    directions: Optional[Dict[str, str]] = None,
 ) -> Tuple[Optional[str], List[str]]:
     """Freerouting rules text that keeps tracks off every copper layer not in ``signal_layers``.
 
@@ -496,6 +497,14 @@ def _signal_layer_rules(
     the board's aspect ratio against, plus 0.2 per signal layer on the outer layers of a
     board with more than two).
 
+    ``directions`` (layer -> "horizontal" or "vertical") sets a layer's preferred routing
+    direction. Freerouting otherwise alternates directions from the top layer down, counting
+    plane layers too, so the two signal layers either side of a plane pair can come out with
+    the same direction. Giving one "horizontal" and the other "vertical" makes one carry the
+    east-west runs and the other the north-south runs, with vias between: tracks on a layer
+    stop blocking each other. It is a cost, not a ban; the against-direction factor decides
+    how firmly it holds.
+
     The file holds only what was asked for. Freerouting reads each ``layer_rule`` key on
     its own, and an explicit value replaces the per-layer default it would otherwise
     compute (``RouterSettings.applyBoardSpecificOptimizations``: preferred directions from
@@ -508,11 +517,15 @@ def _signal_layer_rules(
     restricted layers); (None, []) when nothing would be restricted or costed.
     """
     costs = {str(k): float(v) for k, v in (trace_costs or {}).items()}
+    dirs = {str(k): str(v).lower() for k, v in (directions or {}).items()}
+    bad = {k: v for k, v in dirs.items() if v not in ("horizontal", "vertical")}
+    if bad:
+        raise ValueError(f"layer direction must be 'horizontal' or 'vertical': {bad}")
     wanted = [str(n) for n in signal_layers or []]
-    if not (wanted or costs):
+    if not (wanted or costs or dirs):
         return None, []
     layers = _dsn_layer_names(dsn_text)
-    unknown = [n for n in wanted + list(costs) if n not in layers]
+    unknown = [n for n in wanted + list(costs) + list(dirs) if n not in layers]
     if unknown:
         raise ValueError(f"not a layer of this board's DSN: {unknown} (DSN layers: {layers})")
     restricted = [name for name in layers if wanted and name not in wanted]
@@ -520,12 +533,15 @@ def _signal_layer_rules(
     for name in layers:
         if name in restricted:
             rules.append(f"    (layer_rule {dsn_quote(name)} (active off))\n")
-        elif name in costs:
-            k = costs[name]
-            rules.append(
-                f"    (layer_rule {dsn_quote(name)} (preferred_direction_trace_costs {k:g})"
-                f" (against_preferred_direction_trace_costs {2 * k:g}))\n"
-            )
+        elif name in costs or name in dirs:
+            parts = []
+            if name in dirs:
+                parts.append(f"(preferred_direction {dirs[name]})")
+            if name in costs:
+                k = costs[name]
+                parts.append(f"(preferred_direction_trace_costs {k:g})")
+                parts.append(f"(against_preferred_direction_trace_costs {2 * k:g})")
+            rules.append(f"    (layer_rule {dsn_quote(name)} {' '.join(parts)})\n")
     if not rules:
         return None, []
     # Freerouting checks the header's name against the DSN file's stem (a mismatch is
@@ -1334,23 +1350,27 @@ class FreeroutingCommands:
         rules_path: Optional[str] = None
         signal_layers = list(params.get("signalLayers") or [])
         trace_costs = dict(params.get("layerTraceCosts") or {})
-        if signal_layers or trace_costs:
+        layer_directions = dict(params.get("layerDirections") or {})
+        if signal_layers or trace_costs or layer_directions:
             try:
                 # Canonical names (F.Cu) become the board's own names, which the DSN uses.
                 signal_layers = _board_layer_names(self.board, signal_layers)
                 cost_layers = _board_layer_names(self.board, trace_costs)
                 trace_costs = dict(zip(cost_layers, trace_costs.values()))
+                dir_layers = _board_layer_names(self.board, layer_directions)
+                layer_directions = dict(zip(dir_layers, layer_directions.values()))
                 with open(dsn_path, "r", encoding="utf-8", newline="") as fh:
                     rules_text, restricted_layers = _signal_layer_rules(
                         fh.read(),
                         signal_layers,
                         trace_costs,
                         design_name=os.path.splitext(os.path.basename(dsn_path))[0],
+                        directions=layer_directions,
                     )
             except ValueError as e:
                 return {
                     "success": False,
-                    "message": "signalLayers / layerTraceCosts name a layer this board lacks",
+                    "message": "signalLayers / layerTraceCosts / layerDirections: bad layer or value",
                     "errorDetails": str(e),
                 }
             if rules_text:
@@ -1620,6 +1640,7 @@ class FreeroutingCommands:
             # By the board's own layer names (what the DSN and the rules file use).
             "tracksKeptOffLayers": restricted_layers,
             "layerTraceCosts": trace_costs,
+            "layerDirections": layer_directions,
             # Artifacts are staged in a temp dir and removed after the run
             # (#249); with keepArtifacts=true they are copied next to the
             # board and these fields point at the kept copies.

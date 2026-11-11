@@ -105,6 +105,12 @@ export function registerFreeroutingTools(server: McpServer, callKicadScript: Fun
         .describe(
           "Per-layer trace cost factor, e.g. {\"In1.Cu\": 5}: the layer stays usable but a track there costs more (the factor along its preferred direction, twice that against it; Freerouting's defaults are about 1 and 2), so a plane layer carries only the tracks that fit nowhere else. Keys are canonical (In1.Cu) or the board's own layer names; a name the board lacks is refused. Combines with signalLayers; written to the same Freerouting rules file.",
         ),
+      layerDirections: z
+        .record(z.string(), z.enum(["horizontal", "vertical"]))
+        .optional()
+        .describe(
+          'Preferred routing direction per layer, e.g. {"In3.Cu": "horizontal", "In4.Cu": "vertical"}: one inner layer carries the east-west runs, the other the north-south runs, with vias between, so tracks on a layer stop blocking each other. A cost, not a ban (set how firmly with layerTraceCosts: the factor along the direction, twice that against it). Without it Freerouting alternates directions from the top layer down, counting plane layers, so two signal layers can get the same direction. Written to the same rules file as signalLayers and layerTraceCosts.',
+        ),
       signalLayers: z
         .array(z.string())
         .optional()
