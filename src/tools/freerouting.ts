@@ -78,6 +78,19 @@ export function registerFreeroutingTools(server: McpServer, callKicadScript: Fun
         .optional()
         .describe(
           "Leave these nets (names or globs) out of the routing job, e.g. high-current nets you will pour by hand.",
+      routerSettings: z
+        .record(
+          z.string(),
+          z.union([
+            z.string(),
+            z.number(),
+            z.boolean(),
+            z.array(z.union([z.string(), z.number(), z.boolean()])),
+          ]),
+        )
+        .optional()
+        .describe(
+          'Freerouting router settings for this run, by the names in Freerouting\'s docs/settings.md under `router`; each is passed as --router.<name>=<value>, a list joined with commas. Examples: {"autorouter.priority_net_classes": ["DIFF", "ANALOG"]} routes those net classes first and keeps other nets from ripping them; {"autorouter.plane_as_priority": true} gives each plane pad a via of its own into its plane (the plane\'s layer must be of type power); {"autorouter.ignore_net_classes": ["HV"]}. Which settings exist depends on the Freerouting version. Use maxPasses and jobTimeout for those two.',
         ),
       keepArtifacts: z
         .boolean()
