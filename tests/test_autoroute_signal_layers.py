@@ -328,3 +328,38 @@ def test_real_board_with_renamed_layers(tmp_path):
     )
     assert restricted == ["GND plane"]
     assert '(layer_rule "GND plane" (active off))' in rules
+
+
+def test_directions_set_a_layers_preferred_direction():
+    """One inner signal layer east-west, the other north-south (dense 6-layer board, 2026-11)."""
+    text, restricted = _signal_layer_rules(
+        DSN, [], directions={"In1.Cu": "horizontal", "In2.Cu": "Vertical"}
+    )
+    assert restricted == []
+    assert "(layer_rule In1.Cu (preferred_direction horizontal))" in text
+    assert "(layer_rule In2.Cu (preferred_direction vertical))" in text
+    assert "F.Cu" not in text and "B.Cu" not in text  # layers not named keep Freerouting's defaults
+
+
+def test_direction_and_cost_share_one_rule():
+    text, _ = _signal_layer_rules(DSN, [], {"In1.Cu": 1.5}, directions={"In1.Cu": "horizontal"})
+    assert (
+        "(layer_rule In1.Cu (preferred_direction horizontal) (preferred_direction_trace_costs 1.5)"
+        " (against_preferred_direction_trace_costs 3))" in text
+    )
+
+
+def test_a_restricted_layer_gets_no_direction():
+    text, restricted = _signal_layer_rules(
+        DSN, ["F.Cu", "In2.Cu", "B.Cu"], directions={"In1.Cu": "horizontal"}
+    )
+    assert restricted == ["In1.Cu"]
+    assert "(layer_rule In1.Cu (active off))" in text
+    assert "preferred_direction" not in text
+
+
+def test_bad_direction_or_layer_is_refused():
+    with pytest.raises(ValueError, match="horizontal"):
+        _signal_layer_rules(DSN, [], directions={"In1.Cu": "diagonal"})
+    with pytest.raises(ValueError, match="not a layer"):
+        _signal_layer_rules(DSN, [], directions={"In7.Cu": "horizontal"})
