@@ -78,6 +78,7 @@ export function registerFreeroutingTools(server: McpServer, callKicadScript: Fun
         .optional()
         .describe(
           "Leave these nets (names or globs) out of the routing job, e.g. high-current nets you will pour by hand.",
+        ),
       routerSettings: z
         .record(
           z.string(),
